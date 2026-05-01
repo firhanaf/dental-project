@@ -83,7 +83,7 @@ func (r *PatientRepo) List(ctx context.Context, f PatientFilter) ([]model.Patien
 	}
 	defer rows.Close()
 
-	var patients []model.PatientListRow
+	patients := make([]model.PatientListRow, 0)
 	for rows.Next() {
 		var p model.PatientListRow
 		if err := rows.Scan(
@@ -157,10 +157,64 @@ func (r *PatientRepo) Update(ctx context.Context, p *model.Patient) error {
 	).Scan(&p.UpdatedAt)
 }
 
+func (r *PatientRepo) ExistsByNIK(ctx context.Context, nik string, excludeID *uuid.UUID) (bool, error) {
+	query := "SELECT EXISTS(SELECT 1 FROM patients WHERE nik = $1 AND deleted_at IS NULL"
+	args := []interface{}{nik}
+	if excludeID != nil {
+		query += " AND id != $2"
+		args = append(args, *excludeID)
+	}
+	query += ")"
+	var exists bool
+	if err := r.db.QueryRow(ctx, query, args...).Scan(&exists); err != nil {
+		return false, fmt.Errorf("check nik: %w", err)
+	}
+	return exists, nil
+}
+
 func (r *PatientRepo) SoftDelete(ctx context.Context, id uuid.UUID) error {
 	_, err := r.db.Exec(ctx,
 		"UPDATE patients SET deleted_at=NOW(), updated_at=NOW() WHERE id=$1 AND deleted_at IS NULL",
 		id,
 	)
 	return err
+}
+
+func (r *PatientRepo) ListForExport(ctx context.Context, branchID *uuid.UUID) ([]model.PatientExportRow, error) {
+	where := "WHERE p.deleted_at IS NULL"
+	args := []interface{}{}
+	if branchID != nil {
+		where += " AND p.branch_id = $1"
+		args = append(args, *branchID)
+	}
+
+	query := fmt.Sprintf(`
+		SELECT p.no_rm, p.name, p.date_of_birth,
+		       EXTRACT(YEAR FROM AGE(p.date_of_birth))::INT AS age,
+		       p.gender, p.phone, p.address, p.allergy_notes, p.status,
+		       b.name AS branch_name, p.created_at
+		FROM patients p
+		JOIN branches b ON b.id = p.branch_id
+		%s
+		ORDER BY p.created_at DESC`, where)
+
+	rows, err := r.db.Query(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("list patients for export: %w", err)
+	}
+	defer rows.Close()
+
+	result := make([]model.PatientExportRow, 0)
+	for rows.Next() {
+		var p model.PatientExportRow
+		if err := rows.Scan(
+			&p.NoRM, &p.Name, &p.DateOfBirth, &p.Age,
+			&p.Gender, &p.Phone, &p.Address, &p.AllergyNotes,
+			&p.Status, &p.BranchName, &p.CreatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("scan patient export: %w", err)
+		}
+		result = append(result, p)
+	}
+	return result, nil
 }

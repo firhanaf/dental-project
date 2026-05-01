@@ -129,9 +129,38 @@ type PatientListRow struct {
 	Patient
 	BranchName    string  `db:"branch_name"    json:"branch_name"`
 	Age           int     `db:"age"            json:"age"`
-	LastVisitDate *string `db:"last_visit_date" json:"last_visit_date"`
+	LastVisitDate *time.Time `db:"last_visit_date" json:"last_visit_date"`
 	LastDiagnosis *string `db:"last_diagnosis" json:"last_diagnosis"`
 	LastDoctor    *string `db:"last_doctor"    json:"last_doctor"`
 	TotalVisits   int     `db:"total_visits"   json:"total_visits"`
 	TotalCost     float64 `db:"total_cost"     json:"total_cost"`
+}
+
+// PatientExportRow — data pasien lengkap untuk export Excel
+type PatientExportRow struct {
+	NoRM         string        `db:"no_rm"`
+	Name         string        `db:"name"`
+	DateOfBirth  time.Time     `db:"date_of_birth"`
+	Age          int           `db:"age"`
+	Gender       GenderType    `db:"gender"`
+	Phone        string        `db:"phone"`
+	Address      *string       `db:"address"`
+	AllergyNotes *string       `db:"allergy_notes"`
+	Status       PatientStatus `db:"status"`
+	BranchName   string        `db:"branch_name"`
+	CreatedAt    time.Time     `db:"created_at"`
+}
+
+// VisitExportRow — data kunjungan + join untuk export Excel
+type VisitExportRow struct {
+	PatientNoRM    string    `db:"no_rm"`
+	PatientName    string    `db:"patient_name"`
+	VisitDate      time.Time `db:"visit_date"`
+	DoctorName     string    `db:"doctor_name"`
+	ChiefComplaint string    `db:"chief_complaint"`
+	Diagnosis      *string   `db:"diagnosis"`
+	Treatment      *string   `db:"treatment"`
+	TeethInvolved  *string   `db:"teeth_involved"`
+	Cost           float64   `db:"cost"`
+	BranchName     string    `db:"branch_name"`
 }

@@ -1,0 +1,88 @@
+# ── Production stack ─────────────────────────────────────────
+# Jalankan dari folder dental-project/:
+#   cp dental-api/.env.example .env  (edit nilainya)
+#   docker compose up -d
+#   docker compose exec go-api sh -c "DATABASE_URL=... make migrate"  (sekali saja)
+#
+# Prereq: buat file nginx/default.conf sebelum pertama kali up.
+# Lihat nginx/default.conf.example sebagai referensi.
+
+services:
+
+  nginx:
+    image: nginx:1.25-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ssl-certs:/etc/ssl/private
+    depends_on:
+      - go-api
+    networks:
+      - dental-net
+    restart: unless-stopped
+
+  go-api:
+    build:
+      context: ./dental-api
+      dockerfile: Dockerfile
+    env_file: .env
+    environment:
+      # Override agar go-api selalu konek ke container postgres (bukan localhost)
+      - DB_HOST=postgres
+    volumes:
+      - uploads:/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - dental-net
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      # Dipetakan dari var yang sama di .env
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - dental-net
+    restart: unless-stopped
+
+  backup-cron:
+    image: prodrigestivill/postgres-backup-local
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      SCHEDULE: "@daily"
+      BACKUP_KEEP_DAYS: "7"
+      BACKUP_KEEP_WEEKS: "4"
+      BACKUP_KEEP_MONTHS: "6"
+    volumes:
+      - backups:/backups
+    depends_on:
+      - postgres
+    networks:
+      - dental-net
+    restart: unless-stopped
+
+volumes:
+  pg-data:
+  uploads:
+  ssl-certs:
+  backups:
+
+networks:
+  dental-net:
+    driver: bridge

@@ -43,7 +43,7 @@ func (r *UserRepo) List(ctx context.Context) ([]model.User, error) {
 	rows, err := r.db.Query(ctx, q)
 	if err != nil { return nil, err }
 	defer rows.Close()
-	var users []model.User
+	users := make([]model.User, 0)
 	for rows.Next() {
 		var u model.User
 		if err := rows.Scan(&u.ID,&u.BranchID,&u.Name,&u.Email,&u.PasswordHash,

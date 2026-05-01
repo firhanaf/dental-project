@@ -28,31 +28,31 @@ func NewLocal(baseDir string, maxSizeMB int64) *Local {
 	return &Local{baseDir: baseDir, maxSizeMB: maxSizeMB}
 }
 
-// Save menyimpan file ke disk. Returns storedName (uuid.ext), filePath (relatif), error.
-func (s *Local) Save(file multipart.File, header *multipart.FileHeader, patientID, visitID string) (storedName, filePath string, err error) {
+// Save menyimpan file ke disk. Returns storedName (uuid.ext), filePath (relatif), mimeType, error.
+func (s *Local) Save(file multipart.File, header *multipart.FileHeader, patientID, visitID string) (storedName, filePath, mimeType string, err error) {
 	if header.Size > s.maxSizeMB*1024*1024 {
-		return "", "", fmt.Errorf("ukuran file melebihi batas %d MB", s.maxSizeMB)
+		return "", "", "", fmt.Errorf("ukuran file melebihi batas %d MB", s.maxSizeMB)
 	}
 
 	// Detect MIME dari konten aktual, bukan ekstensi
 	buf := make([]byte, 512)
 	n, err := file.Read(buf)
 	if err != nil && err != io.EOF {
-		return "", "", fmt.Errorf("baca file: %w", err)
+		return "", "", "", fmt.Errorf("baca file: %w", err)
 	}
-	mime := http.DetectContentType(buf[:n])
+	detectedMime := http.DetectContentType(buf[:n])
 	// Strip parameter (e.g. "image/jpeg; charset=...")
-	mime = strings.Split(mime, ";")[0]
-	mime = strings.TrimSpace(mime)
+	detectedMime = strings.Split(detectedMime, ";")[0]
+	detectedMime = strings.TrimSpace(detectedMime)
 
-	ext, ok := allowedMIME[mime]
+	ext, ok := allowedMIME[detectedMime]
 	if !ok {
-		return "", "", fmt.Errorf("tipe file tidak diizinkan: %s", mime)
+		return "", "", "", fmt.Errorf("tipe file tidak diizinkan: %s", detectedMime)
 	}
 
 	// Seek kembali ke awal
 	if _, err := file.Seek(0, io.SeekStart); err != nil {
-		return "", "", fmt.Errorf("seek file: %w", err)
+		return "", "", "", fmt.Errorf("seek file: %w", err)
 	}
 
 	storedName = uuid.New().String() + ext
@@ -60,20 +60,20 @@ func (s *Local) Save(file multipart.File, header *multipart.FileHeader, patientI
 	absDir := filepath.Join(s.baseDir, patientID, visitID)
 
 	if err := os.MkdirAll(absDir, 0755); err != nil {
-		return "", "", fmt.Errorf("buat direktori: %w", err)
+		return "", "", "", fmt.Errorf("buat direktori: %w", err)
 	}
 
 	dst, err := os.Create(filepath.Join(s.baseDir, relPath))
 	if err != nil {
-		return "", "", fmt.Errorf("buat file: %w", err)
+		return "", "", "", fmt.Errorf("buat file: %w", err)
 	}
 	defer dst.Close()
 
 	if _, err := io.Copy(dst, file); err != nil {
-		return "", "", fmt.Errorf("tulis file: %w", err)
+		return "", "", "", fmt.Errorf("tulis file: %w", err)
 	}
 
-	return storedName, relPath, nil
+	return storedName, relPath, detectedMime, nil
 }
 
 // Delete menghapus file dari disk.

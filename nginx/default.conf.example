@@ -1,0 +1,41 @@
+# Rename file ini ke default.conf dan sesuaikan domain/SSL.
+# Referensi: https://nginx.org/en/docs/http/ngx_http_proxy_module.html
+
+server {
+    listen 80;
+    server_name _;
+
+    # Redirect semua HTTP ke HTTPS
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name klinik.example.com;   # ganti dengan domain asli
+
+    ssl_certificate     /etc/ssl/private/fullchain.pem;
+    ssl_certificate_key /etc/ssl/private/privkey.pem;
+
+    # Upload max 25MB (sedikit di atas MAX_FILE_SIZE_MB)
+    client_max_body_size 25M;
+
+    # Proxy ke Go API
+    location /api/ {
+        proxy_pass         http://go-api:8080;
+        proxy_set_header   Host              $host;
+        proxy_set_header   X-Real-IP         $remote_addr;
+        proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+        proxy_read_timeout 60s;
+    }
+
+    location /health {
+        proxy_pass http://go-api:8080;
+    }
+
+    # Static React build (setelah frontend selesai)
+    # location / {
+    #     root  /var/www/html;
+    #     try_files $uri $uri/ /index.html;
+    # }
+}

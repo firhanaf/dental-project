@@ -64,7 +64,7 @@ func main() {
 	branchSvc     := service.NewBranchService(branchRepo)
 	patientSvc    := service.NewPatientService(patientRepo)
 	visitSvc      := service.NewVisitService(visitRepo, patientRepo)
-	attachmentSvc := service.NewAttachmentService(attachmentRepo, store)
+	attachmentSvc := service.NewAttachmentService(attachmentRepo, visitRepo, store)
 	exportSvc     := service.NewExportService(patientRepo, visitRepo)
 	userMgmtSvc   := service.NewUserMgmtService(userRepo)
 
