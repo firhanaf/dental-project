@@ -1,11 +1,10 @@
 # ── Production stack ─────────────────────────────────────────
-# Jalankan dari folder dental-project/:
-#   cp dental-api/.env.example .env  (edit nilainya)
-#   docker compose up -d
-#   docker compose exec go-api sh -c "DATABASE_URL=... make migrate"  (sekali saja)
+# Deploy pertama kali:
+#   cp .env.example .env        (edit semua nilai!)
+#   ./deploy.sh                 (build frontend + jalankan semua)
 #
-# Prereq: buat file nginx/default.conf sebelum pertama kali up.
-# Lihat nginx/default.conf.example sebagai referensi.
+# Update berikutnya:
+#   git pull && ./deploy.sh
 
 services:
 
@@ -16,6 +15,7 @@ services:
       - "443:443"
     volumes:
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./dental-web/dist:/var/www/html:ro
       - ssl-certs:/etc/ssl/private
     depends_on:
       - go-api
