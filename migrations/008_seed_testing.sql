@@ -4,6 +4,8 @@
 -- Jangan dijalankan di production yang sudah memiliki data nyata
 -- ============================================================
 
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
 BEGIN;
 
 -- ── 1. Update nama cabang ─────────────────────────────────────
