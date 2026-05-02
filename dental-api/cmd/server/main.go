@@ -73,7 +73,7 @@ func main() {
 	branchH     := handler.NewBranchHandler(branchSvc)
 	patientH    := handler.NewPatientHandler(patientSvc)
 	visitH      := handler.NewVisitHandler(visitSvc)
-	attachmentH := handler.NewAttachmentHandler(attachmentSvc)
+	attachmentH := handler.NewAttachmentHandler(attachmentSvc, cfg.MaxFileSizeMB)
 	exportH     := handler.NewExportHandler(exportSvc)
 	userMgmtH   := handler.NewUserMgmtHandler(userMgmtSvc)
 

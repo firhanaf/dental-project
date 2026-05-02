@@ -2,6 +2,7 @@ package handler
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -11,10 +12,13 @@ import (
 	"github.com/yourusername/dental-api/pkg/response"
 )
 
-type AttachmentHandler struct{ svc *service.AttachmentService }
+type AttachmentHandler struct {
+	svc       *service.AttachmentService
+	maxSizeMB int64
+}
 
-func NewAttachmentHandler(svc *service.AttachmentService) *AttachmentHandler {
-	return &AttachmentHandler{svc: svc}
+func NewAttachmentHandler(svc *service.AttachmentService, maxSizeMB int64) *AttachmentHandler {
+	return &AttachmentHandler{svc: svc, maxSizeMB: maxSizeMB}
 }
 
 func (h *AttachmentHandler) ListByPatient(w http.ResponseWriter, r *http.Request) {
@@ -54,8 +58,15 @@ func (h *AttachmentHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 func (h *AttachmentHandler) Upload(w http.ResponseWriter, r *http.Request) {
 	claims := middleware.GetClaims(r)
 
-	// Batas parsing 32MB untuk form
-	if err := r.ParseMultipartForm(32 << 20); err != nil {
+	// Tolak body yang melebihi batas SEBELUM dibaca penuh
+	r.Body = http.MaxBytesReader(w, r.Body, h.maxSizeMB<<20)
+	if err := r.ParseMultipartForm(h.maxSizeMB << 20); err != nil {
+		var maxErr *http.MaxBytesError
+		if errors.As(err, &maxErr) {
+			response.Error(w, http.StatusRequestEntityTooLarge, "FILE_TOO_LARGE",
+				fmt.Sprintf("Ukuran file maksimal %d MB", h.maxSizeMB))
+			return
+		}
 		response.BadRequest(w, "Form tidak valid")
 		return
 	}
