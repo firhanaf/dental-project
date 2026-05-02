@@ -12,18 +12,21 @@ RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o dental-api ./cmd/serve
 # ── Stage 2: runtime ─────────────────────────────────────────
 FROM alpine:3.20
 
-RUN apk add --no-cache ca-certificates tzdata
+# su-exec: lightweight tool untuk switch user di entrypoint
+RUN apk add --no-cache ca-certificates tzdata su-exec
 
-# Non-root user
+# Non-root user (UID/GID default Alpine: 1000/1000 via -S)
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
-# Direktori upload (override oleh volume di compose)
-RUN mkdir -p /uploads && chown appuser:appgroup /uploads
+# Direktori upload — ownership di-fix ulang oleh entrypoint saat runtime
+RUN mkdir -p /uploads
 
 WORKDIR /app
 COPY --from=builder /app/dental-api .
-RUN chown appuser:appgroup dental-api
+COPY entrypoint.sh .
+RUN chmod +x entrypoint.sh
 
-USER appuser
+# Tidak pakai USER appuser di sini — entrypoint.sh yang switch ke appuser
+# setelah chown /uploads
 EXPOSE 8080
-CMD ["./dental-api"]
+ENTRYPOINT ["./entrypoint.sh"]
