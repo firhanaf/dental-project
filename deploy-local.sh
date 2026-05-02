@@ -6,18 +6,25 @@
 #   ./deploy-local.sh 54.123.45.67 ~/.ssh/dental-key.pem
 set -e
 
+# Terima format "54.x.x.x" atau "ubuntu@54.x.x.x"
 EC2_IP="${1:?Masukkan EC2 IP. Contoh: ./deploy-local.sh 54.123.45.67}"
 PEM="${2:-~/.ssh/id_rsa}"
+# Strip "ubuntu@" jika sudah ada, lalu tambah kembali
+EC2_IP="${EC2_IP#ubuntu@}"
 REMOTE="ubuntu@$EC2_IP"
 REMOTE_DIR="~/dental-project"
 
 # ── Build frontend ────────────────────────────────────────────
-echo "▶ Install dependencies..."
 cd dental-web
-npm ci --silent
+
+if [ ! -d node_modules ]; then
+  echo "▶ Install dependencies (pertama kali)..."
+  node_modules/.bin/npm install || npm.cmd install || npm install
+fi
 
 echo "▶ Build React frontend..."
-npm run build
+node node_modules/typescript/bin/tsc -b
+node node_modules/vite/bin/vite.js build
 cd ..
 
 echo "  Build selesai → dental-web/dist/"

@@ -17,8 +17,8 @@ uploads/
 postgres-data/
 backups/
 
-# ── Nginx config (berisi domain & path SSL) ──
-nginx/default.conf
+# ── Nginx SSL config (jangan commit jika berisi path SSL) ──
+nginx/default.ssl.conf
 
 # ── IDE ──────────────────────────────────────
 .idea/
