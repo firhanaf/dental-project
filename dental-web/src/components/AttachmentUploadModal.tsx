@@ -67,7 +67,17 @@ export default function AttachmentUploadModal({ visits, onClose, onSuccess }: Pr
                 type="file"
                 accept=".pdf,image/jpeg,image/png,image/webp"
                 style={{ fontSize: 13, color: 'var(--text2)', width: '100%' }}
-                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                onChange={(e) => {
+                  const f = e.target.files?.[0] ?? null
+                  if (f && f.size > 20 * 1024 * 1024) {
+                    setError('Ukuran file maksimal 20 MB')
+                    e.target.value = ''
+                    setFile(null)
+                    return
+                  }
+                  setError('')
+                  setFile(f)
+                }}
                 required
               />
               <p className="text-[11px] mt-2" style={{ color: 'var(--text3)' }}>
