@@ -36,7 +36,7 @@ export default function Layout() {
   }, [signOut, navigate])
 
   const { showWarning, countdown, stayLoggedIn } = useIdleTimeout({
-    idleMinutes: 1ok ,
+    idleMinutes: 30,
     warningSeconds: 60,
     onLogout: handleIdleLogout,
   })
