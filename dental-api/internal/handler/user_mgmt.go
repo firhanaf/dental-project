@@ -73,10 +73,35 @@ func (h *UserMgmtHandler) Deactivate(w http.ResponseWriter, r *http.Request) {
 		response.BadRequest(w, "ID tidak valid")
 		return
 	}
-
 	if err := h.svc.Deactivate(r.Context(), id); err != nil {
 		response.InternalError(w)
 		return
 	}
 	response.JSON(w, http.StatusOK, map[string]string{"message": "User berhasil dinonaktifkan"})
+}
+
+func (h *UserMgmtHandler) Activate(w http.ResponseWriter, r *http.Request) {
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		response.BadRequest(w, "ID tidak valid")
+		return
+	}
+	if err := h.svc.Activate(r.Context(), id); err != nil {
+		response.InternalError(w)
+		return
+	}
+	response.JSON(w, http.StatusOK, map[string]string{"message": "User berhasil diaktifkan"})
+}
+
+func (h *UserMgmtHandler) Delete(w http.ResponseWriter, r *http.Request) {
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		response.BadRequest(w, "ID tidak valid")
+		return
+	}
+	if err := h.svc.Delete(r.Context(), id); err != nil {
+		response.BadRequest(w, err.Error())
+		return
+	}
+	response.JSON(w, http.StatusOK, map[string]string{"message": "User berhasil dihapus"})
 }

@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"golang.org/x/crypto/bcrypt"
 	"github.com/yourusername/dental-api/internal/dto"
 	"github.com/yourusername/dental-api/internal/model"
@@ -95,4 +96,20 @@ func (s *UserMgmtService) Update(ctx context.Context, id uuid.UUID, req *dto.Upd
 
 func (s *UserMgmtService) Deactivate(ctx context.Context, id uuid.UUID) error {
 	return s.repo.Deactivate(ctx, id)
+}
+
+func (s *UserMgmtService) Activate(ctx context.Context, id uuid.UUID) error {
+	return s.repo.Activate(ctx, id)
+}
+
+func (s *UserMgmtService) Delete(ctx context.Context, id uuid.UUID) error {
+	err := s.repo.Delete(ctx, id)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23503" {
+			return fmt.Errorf("user tidak dapat dihapus karena memiliki riwayat kunjungan — gunakan Nonaktifkan")
+		}
+		return err
+	}
+	return nil
 }

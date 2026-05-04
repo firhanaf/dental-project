@@ -1,10 +1,11 @@
 import { useState, type FormEvent } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getUsers, createUser, updateUser, deactivateUser } from '../api/users'
+import { toast } from 'sonner'
+import { getUsers, createUser, updateUser, activateUser, deactivateUser, deleteUser } from '../api/users'
 import { getBranches } from '../api/branches'
 import {
   Button, FormField, Badge, EmptyState, PageHeader,
-  ErrorMessage, formatDate, Spinner,
+  formatDate, Spinner,
 } from '../components/ui'
 
 type ModalMode = 'create' | 'edit' | null
@@ -13,7 +14,6 @@ export default function UserManagementPage() {
   const qc = useQueryClient()
   const [modal, setModal] = useState<ModalMode>(null)
   const [editId, setEditId] = useState<string | null>(null)
-  const [error, setError] = useState('')
 
   const [form, setForm] = useState({
     name: '', email: '', password: '', role: 'write', branch_id: '',
@@ -33,27 +33,56 @@ export default function UserManagementPage() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['users'] })
+      toast.success(editId ? 'User berhasil diperbarui' : 'User berhasil dibuat')
       closeModal()
     },
-    onError: (err: any) => setError(err.response?.data?.message ?? 'Terjadi kesalahan'),
+    onError: (err: any) => {
+      toast.error(err.response?.data?.message ?? 'Terjadi kesalahan', { duration: 3000 })
+    },
   })
 
   const deactivateMutation = useMutation({
     mutationFn: (id: string) => deactivateUser(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['users'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['users'] })
+      toast.success('User dinonaktifkan — tidak bisa login sampai diaktifkan kembali')
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.message ?? 'Gagal menonaktifkan user', { duration: 3000 })
+    },
+  })
+
+  const activateMutation = useMutation({
+    mutationFn: (id: string) => activateUser(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['users'] })
+      toast.success('User berhasil diaktifkan kembali')
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.message ?? 'Gagal mengaktifkan user', { duration: 3000 })
+    },
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteUser(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['users'] })
+      toast.success('User berhasil dihapus permanen')
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.message ?? 'Gagal menghapus user', { duration: 5000 })
+    },
   })
 
   const openCreate = () => {
     setForm({ name: '', email: '', password: '', role: 'write', branch_id: '' })
     setEditId(null)
-    setError('')
     setModal('create')
   }
 
   const openEdit = (u: any) => {
     setForm({ name: u.name, email: u.email, password: '', role: u.role, branch_id: u.branch_id ?? '' })
     setEditId(u.id)
-    setError('')
     setModal('edit')
   }
 
@@ -61,7 +90,6 @@ export default function UserManagementPage() {
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
-    setError('')
     saveMutation.mutate()
   }
 
@@ -126,17 +154,36 @@ export default function UserManagementPage() {
                     <td>
                       <div className="flex gap-1.5">
                         <button className="btn btn-ghost btn-sm" onClick={() => openEdit(u)}>Edit</button>
-                        {u.is_active && (
+                        {u.is_active ? (
                           <button
                             className="btn btn-ghost btn-sm"
-                            style={{ color: 'var(--danger-t)' }}
+                            style={{ color: 'var(--amber-t)' }}
                             onClick={() => {
-                              if (confirm(`Nonaktifkan user ${u.name}?`)) deactivateMutation.mutate(u.id)
+                              if (confirm(`Nonaktifkan ${u.name}?\n\nUser tidak akan bisa login sampai diaktifkan kembali.`))
+                                deactivateMutation.mutate(u.id)
                             }}
                           >
                             Nonaktifkan
                           </button>
+                        ) : (
+                          <button
+                            className="btn btn-ghost btn-sm"
+                            style={{ color: 'var(--teal)' }}
+                            onClick={() => activateMutation.mutate(u.id)}
+                          >
+                            Aktifkan
+                          </button>
                         )}
+                        <button
+                          className="btn btn-ghost btn-sm"
+                          style={{ color: 'var(--danger-t)' }}
+                          onClick={() => {
+                            if (confirm(`Hapus permanen user ${u.name}?\n\nTindakan ini tidak dapat dibatalkan.\nUser dengan riwayat kunjungan tidak dapat dihapus — gunakan Nonaktifkan.`))
+                              deleteMutation.mutate(u.id)
+                          }}
+                        >
+                          Hapus
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -155,8 +202,6 @@ export default function UserManagementPage() {
               <button className="modal-close" onClick={closeModal}>&times;</button>
             </div>
             <form onSubmit={handleSubmit} className="modal-body space-y-4">
-              {error && <ErrorMessage message={error} />}
-
               <FormField label="Nama" required>
                 <input className="form-input" value={form.name} onChange={(e) => set('name', e.target.value)} required />
               </FormField>

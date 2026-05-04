@@ -25,6 +25,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [successName, setSuccessName] = useState('')
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -33,10 +34,10 @@ export default function LoginPage() {
     try {
       const res = await login(email, password)
       signIn(res.token, res.user)
-      navigate('/')
+      setSuccessName(res.user.name)
+      setTimeout(() => navigate('/'), 1500)
     } catch (err: any) {
       setError(err.response?.data?.message ?? 'Email atau password salah')
-    } finally {
       setLoading(false)
     }
   }
@@ -60,6 +61,23 @@ export default function LoginPage() {
         </div>
 
         <div className="card" style={{ padding: 28 }}>
+          {successName ? (
+            <div className="flex flex-col items-center gap-3 py-4 text-center">
+              <div className="w-10 h-10 rounded-full flex items-center justify-center text-xl"
+                style={{ background: 'var(--teal-l)' }}>
+                ✓
+              </div>
+              <div>
+                <p className="text-[14px] font-semibold" style={{ color: 'var(--teal-d)' }}>
+                  Selamat datang, {successName}!
+                </p>
+                <p className="text-[12px] mt-1" style={{ color: 'var(--text3)' }}>
+                  Mengarahkan ke dashboard...
+                </p>
+              </div>
+              <Spinner size="sm" />
+            </div>
+          ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
               <div className="rounded-[var(--radius)] px-4 py-3 text-[13px]"
@@ -115,6 +133,7 @@ export default function LoginPage() {
               Masuk
             </button>
           </form>
+          )}
         </div>
       </div>
     </div>

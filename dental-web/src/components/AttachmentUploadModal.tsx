@@ -1,8 +1,9 @@
 import { useState, type FormEvent } from 'react'
 import { useMutation } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { uploadAttachment } from '../api/attachments'
 import type { Visit } from '../types'
-import { Button, FormField, ErrorMessage } from './ui'
+import { Button, FormField } from './ui'
 
 interface Props {
   visits: Visit[]
@@ -13,19 +14,22 @@ interface Props {
 export default function AttachmentUploadModal({ visits, onClose, onSuccess }: Props) {
   const [visitId, setVisitId] = useState(visits[0]?.id ?? '')
   const [file, setFile] = useState<File | null>(null)
-  const [error, setError] = useState('')
 
   const mutation = useMutation({
     mutationFn: () => uploadAttachment(visitId, file!),
-    onSuccess,
-    onError: (err: any) => setError(err.response?.data?.message ?? 'Gagal upload file'),
+    onSuccess: () => {
+      toast.success('Lampiran berhasil diupload')
+      onSuccess()
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.message ?? 'Gagal upload file', { duration: 3000 })
+    },
   })
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
-    setError('')
-    if (!file) { setError('Pilih file terlebih dahulu'); return }
-    if (!visitId) { setError('Pilih kunjungan terlebih dahulu'); return }
+    if (!file) { toast.error('Pilih file terlebih dahulu'); return }
+    if (!visitId) { toast.error('Pilih kunjungan terlebih dahulu'); return }
     mutation.mutate()
   }
 
@@ -38,8 +42,6 @@ export default function AttachmentUploadModal({ visits, onClose, onSuccess }: Pr
         </div>
 
         <form onSubmit={handleSubmit} className="modal-body space-y-4">
-          {error && <ErrorMessage message={error} />}
-
           <FormField label="Kunjungan" required>
             <select
               className="form-select"
@@ -70,12 +72,11 @@ export default function AttachmentUploadModal({ visits, onClose, onSuccess }: Pr
                 onChange={(e) => {
                   const f = e.target.files?.[0] ?? null
                   if (f && f.size > 20 * 1024 * 1024) {
-                    setError('Ukuran file maksimal 20 MB')
+                    toast.error('Ukuran file maksimal 20 MB', { duration: 3000 })
                     e.target.value = ''
                     setFile(null)
                     return
                   }
-                  setError('')
                   setFile(f)
                 }}
                 required

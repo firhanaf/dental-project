@@ -1,9 +1,10 @@
 import { useState, useEffect, type FormEvent } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { getVisit, createVisit, updateVisit } from '../api/visits'
 import { getUsers } from '../api/users'
 import { useAuth } from '../hooks/useAuth'
-import { Button, FormField, ErrorMessage, Spinner } from './ui'
+import { Button, FormField, Spinner } from './ui'
 
 interface Props {
   patientId: string
@@ -43,7 +44,6 @@ export default function VisitFormModal({ patientId, visitId, onClose, onSuccess 
     next_control_date: '',
     notes: '',
   })
-  const [error, setError] = useState('')
 
   useEffect(() => {
     if (visitData) {
@@ -77,15 +77,19 @@ export default function VisitFormModal({ patientId, visitId, onClose, onSuccess 
       }
       return isEdit ? updateVisit(visitId!, payload) : createVisit(payload)
     },
-    onSuccess,
-    onError: (err: any) => setError(err.response?.data?.message ?? 'Terjadi kesalahan'),
+    onSuccess: () => {
+      toast.success(isEdit ? 'Kunjungan berhasil diperbarui' : 'Kunjungan berhasil ditambahkan')
+      onSuccess()
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.message ?? 'Terjadi kesalahan', { duration: 3000 })
+    },
   })
 
   const set = (field: string, value: string) => setForm((p) => ({ ...p, [field]: value }))
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
-    setError('')
     mutation.mutate()
   }
 
@@ -101,8 +105,6 @@ export default function VisitFormModal({ patientId, visitId, onClose, onSuccess 
           <div className="flex justify-center py-12"><Spinner /></div>
         ) : (
           <form onSubmit={handleSubmit} className="modal-body space-y-4">
-            {error && <ErrorMessage message={error} />}
-
             <div className="grid grid-cols-2 gap-3">
               <FormField label="Tanggal Kunjungan" required>
                 <input

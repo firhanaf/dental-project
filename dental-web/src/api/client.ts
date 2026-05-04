@@ -30,7 +30,10 @@ client.interceptors.response.use(
     const msg = err.response?.data?.error?.message
     if (msg) err.response.data = { message: msg }
 
-    if (err.response?.status === 401) {
+    // Jangan redirect jika 401 datang dari endpoint login itu sendiri
+    // (artinya credentials salah, bukan token expired)
+    const isLoginEndpoint = err.config?.url?.includes('/auth/login')
+    if (err.response?.status === 401 && !isLoginEndpoint) {
       localStorage.removeItem('token')
       localStorage.removeItem('user')
       window.location.href = '/login'

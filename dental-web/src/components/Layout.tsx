@@ -1,6 +1,10 @@
+import { useCallback } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { toast } from 'sonner'
 import { useAuth } from '../hooks/useAuth'
+import { useIdleTimeout } from '../hooks/useIdleTimeout'
 import { logout } from '../api/auth'
+import IdleWarningModal from './IdleWarningModal'
 
 const navItems = [
   { to: '/',        label: 'Dashboard',       end: true  },
@@ -13,11 +17,29 @@ export default function Layout() {
   const { user, signOut, isSuperAdmin } = useAuth()
   const navigate = useNavigate()
 
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async () => {
+    const name = user?.name ?? ''
     try { await logout() } catch {}
+    toast.success(`Sampai jumpa, ${name}! Anda telah keluar.`)
     signOut()
     navigate('/login')
-  }
+  }, [user?.name, signOut, navigate])
+
+  const handleIdleLogout = useCallback(async () => {
+    try { await logout() } catch {}
+    toast('Sesi berakhir otomatis karena tidak ada aktivitas.', {
+      icon: '🔒',
+      duration: 4000,
+    })
+    signOut()
+    navigate('/login')
+  }, [signOut, navigate])
+
+  const { showWarning, countdown, stayLoggedIn } = useIdleTimeout({
+    idleMinutes: 1ok ,
+    warningSeconds: 60,
+    onLogout: handleIdleLogout,
+  })
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
@@ -84,6 +106,14 @@ export default function Layout() {
       <main className="mx-auto page-enter" style={{ maxWidth: 1200, padding: '24px 24px' }}>
         <Outlet />
       </main>
+
+      {showWarning && (
+        <IdleWarningModal
+          countdown={countdown}
+          onStay={stayLoggedIn}
+          onLogout={handleIdleLogout}
+        />
+      )}
     </div>
   )
 }

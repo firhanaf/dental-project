@@ -27,5 +27,11 @@ export const createUser = (data: CreateUserPayload) =>
 export const updateUser = (id: string, data: UpdateUserPayload) =>
   client.put<User>(`/users/${id}`, data).then((r) => r.data)
 
+export const activateUser = (id: string) =>
+  client.post(`/users/${id}/activate`)
+
 export const deactivateUser = (id: string) =>
+  client.post(`/users/${id}/deactivate`)
+
+export const deleteUser = (id: string) =>
   client.delete(`/users/${id}`)

@@ -75,6 +75,23 @@ func (r *UserRepo) Deactivate(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
+func (r *UserRepo) Activate(ctx context.Context, id uuid.UUID) error {
+	_, err := r.db.Exec(ctx,
+		"UPDATE users SET is_active=true,updated_at=NOW() WHERE id=$1", id)
+	return err
+}
+
+func (r *UserRepo) Delete(ctx context.Context, id uuid.UUID) error {
+	result, err := r.db.Exec(ctx, "DELETE FROM users WHERE id=$1", id)
+	if err != nil {
+		return fmt.Errorf("delete user: %w", err)
+	}
+	if result.RowsAffected() == 0 {
+		return fmt.Errorf("record not found")
+	}
+	return nil
+}
+
 func (r *UserRepo) UpdateLastLogin(ctx context.Context, id uuid.UUID) error {
 	now := time.Now()
 	_, err := r.db.Exec(ctx,

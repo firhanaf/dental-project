@@ -1,20 +1,21 @@
 import { useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { exportPatients, exportVisits } from '../api/export'
 import { getBranches } from '../api/branches'
-import { Button, FormField, PageHeader, ErrorMessage } from '../components/ui'
+import { Button, FormField, PageHeader } from '../components/ui'
 
 export default function ExportPage() {
   const [branchId, setBranchId] = useState('')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
-  const [error, setError] = useState('')
 
   const { data: branches } = useQuery({ queryKey: ['branches'], queryFn: getBranches })
 
   const exportPatientsMutation = useMutation({
     mutationFn: () => exportPatients({ branch_id: branchId || undefined }),
-    onError: () => setError('Gagal export data pasien'),
+    onSuccess: () => toast.success('File Excel pasien berhasil diunduh'),
+    onError: () => toast.error('Gagal mengunduh data pasien', { duration: 3000 }),
   })
 
   const exportVisitsMutation = useMutation({
@@ -24,7 +25,8 @@ export default function ExportPage() {
         date_from: dateFrom || undefined,
         date_to: dateTo || undefined,
       }),
-    onError: () => setError('Gagal export data kunjungan'),
+    onSuccess: () => toast.success('File Excel kunjungan berhasil diunduh'),
+    onError: () => toast.error('Gagal mengunduh data kunjungan', { duration: 3000 }),
   })
 
   return (
@@ -32,8 +34,6 @@ export default function ExportPage() {
       <PageHeader title="Laporan" />
 
       <div className="card" style={{ padding: 24 }}>
-        {error && <ErrorMessage message={error} />}
-
         <FormField label="Filter Cabang">
           <select
             className="form-select"
@@ -57,7 +57,7 @@ export default function ExportPage() {
           </p>
           <Button
             variant="primary"
-            onClick={() => { setError(''); exportPatientsMutation.mutate() }}
+            onClick={() => exportPatientsMutation.mutate()}
             loading={exportPatientsMutation.isPending}
           >
             Download Excel — Pasien
@@ -92,7 +92,7 @@ export default function ExportPage() {
           </div>
           <Button
             variant="primary"
-            onClick={() => { setError(''); exportVisitsMutation.mutate() }}
+            onClick={() => exportVisitsMutation.mutate()}
             loading={exportVisitsMutation.isPending}
           >
             Download Excel — Kunjungan

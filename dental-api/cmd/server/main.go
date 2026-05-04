@@ -152,10 +152,12 @@ func main() {
 			r.Group(func(r chi.Router) {
 				r.Use(authMw.RequireSuperAdmin)
 
-				r.Get("/users",          userMgmtH.List)
-				r.Post("/users",         userMgmtH.Create)
-				r.Put("/users/{id}",     userMgmtH.Update)
-				r.Delete("/users/{id}",  userMgmtH.Deactivate)
+				r.Get("/users",                    userMgmtH.List)
+				r.Post("/users",                   userMgmtH.Create)
+				r.Put("/users/{id}",               userMgmtH.Update)
+				r.Post("/users/{id}/activate",     userMgmtH.Activate)
+				r.Post("/users/{id}/deactivate",   userMgmtH.Deactivate)
+				r.Delete("/users/{id}",            userMgmtH.Delete)
 			})
 		})
 	})

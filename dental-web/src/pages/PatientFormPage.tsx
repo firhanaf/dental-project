@@ -1,10 +1,11 @@
 import { useState, useEffect, type FormEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { getPatient, createPatient, updatePatient } from '../api/patients'
 import { getBranches } from '../api/branches'
 import { useAuth } from '../hooks/useAuth'
-import { Button, FormField, PageHeader, ErrorMessage, Spinner } from '../components/ui'
+import { Button, FormField, PageHeader, Spinner } from '../components/ui'
 
 export default function PatientFormPage() {
   const { id } = useParams<{ id: string }>()
@@ -36,8 +37,6 @@ export default function PatientFormPage() {
     allergy_notes: '',
     branch_id: '',
   })
-  const [error, setError] = useState('')
-
   useEffect(() => {
     if (patient) {
       setForm({
@@ -69,10 +68,11 @@ export default function PatientFormPage() {
     onSuccess: (saved) => {
       qc.invalidateQueries({ queryKey: ['patients'] })
       qc.invalidateQueries({ queryKey: ['patient', saved.id] })
-      navigate(`/patients/${saved.id}`)
+      toast.success(isEdit ? 'Data pasien berhasil diperbarui' : 'Pasien berhasil didaftarkan')
+      setTimeout(() => navigate(`/patients/${saved.id}`), 1000)
     },
     onError: (err: any) => {
-      setError(err.response?.data?.message ?? 'Terjadi kesalahan')
+      toast.error(err.response?.data?.message ?? 'Terjadi kesalahan', { duration: 3000 })
     },
   })
 
@@ -81,9 +81,8 @@ export default function PatientFormPage() {
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
-    setError('')
     if (form.nik && form.nik.length !== 16) {
-      setError('NIK harus 16 digit angka')
+      toast.error('NIK harus 16 digit angka', { duration: 3000 })
       return
     }
     mutation.mutate(form)
@@ -99,8 +98,6 @@ export default function PatientFormPage() {
 
       <div className="card" style={{ padding: 24 }}>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {error && <ErrorMessage message={error} />}
-
           <FormField label="Nama Lengkap" required>
             <input
               className="form-input"

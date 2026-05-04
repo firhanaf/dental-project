@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { getPatient, deletePatient } from '../api/patients'
 import { getVisitsByPatient, deleteVisit } from '../api/visits'
 import { getAttachmentsByPatient, deleteAttachment } from '../api/attachments'
@@ -8,7 +9,7 @@ import type { Attachment } from '../types'
 import { useAuth } from '../hooks/useAuth'
 import {
   Spinner, Button, Badge, EmptyState, PageHeader,
-  formatDate, formatRupiah, formatGender, ErrorMessage,
+  formatDate, formatRupiah, formatGender,
 } from '../components/ui'
 import { getBranches } from '../api/branches'
 import VisitFormModal from '../components/VisitFormModal'
@@ -24,7 +25,6 @@ export default function PatientDetailPage() {
   const [visitModal, setVisitModal] = useState<{ open: boolean; visitId?: string }>({ open: false })
   const [uploadModal, setUploadModal] = useState(false)
   const [previewAttachment, setPreviewAttachment] = useState<Attachment | null>(null)
-  const [deleteError, setDeleteError] = useState('')
 
   const { data: patient, isLoading } = useQuery({
     queryKey: ['patient', id],
@@ -49,21 +49,34 @@ export default function PatientDetailPage() {
     mutationFn: () => deletePatient(id!),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['patients'] })
-      navigate('/patients')
+      toast.success('Pasien berhasil dihapus')
+      setTimeout(() => navigate('/patients'), 1000)
     },
     onError: (err: any) => {
-      setDeleteError(err.response?.data?.message ?? 'Gagal menghapus pasien')
+      toast.error(err.response?.data?.message ?? 'Gagal menghapus pasien', { duration: 3000 })
     },
   })
 
   const deleteVisitMutation = useMutation({
     mutationFn: (visitId: string) => deleteVisit(visitId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['visits', id] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['visits', id] })
+      toast.success('Kunjungan berhasil dihapus')
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.message ?? 'Gagal menghapus kunjungan', { duration: 3000 })
+    },
   })
 
   const deleteAttachmentMutation = useMutation({
     mutationFn: (attId: string) => deleteAttachment(attId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['attachments', id] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['attachments', id] })
+      toast.success('Lampiran berhasil dihapus')
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.message ?? 'Gagal menghapus lampiran', { duration: 3000 })
+    },
   })
 
   if (isLoading) {
@@ -97,8 +110,6 @@ export default function PatientDetailPage() {
           ) : undefined
         }
       />
-
-      {deleteError && <ErrorMessage message={deleteError} />}
 
       {/* Info pasien */}
       <div className="card" style={{ padding: '18px 22px' }}>
