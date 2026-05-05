@@ -9,3 +9,9 @@ export const me = () =>
 
 export const logout = () =>
   client.post('/auth/logout')
+
+export const changePassword = (currentPassword: string, newPassword: string) =>
+  client.put('/auth/change-password', { current_password: currentPassword, new_password: newPassword })
+
+export const resetPassword = (email: string, token: string, newPassword: string) =>
+  client.post('/auth/reset-password', { email, token, new_password: newPassword })

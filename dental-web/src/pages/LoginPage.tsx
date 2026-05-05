@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { login } from '../api/auth'
+import { login, resetPassword } from '../api/auth'
 import { useAuth } from '../hooks/useAuth'
 import { Spinner } from '../components/ui'
 
@@ -27,6 +27,16 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [successName, setSuccessName] = useState('')
 
+  // Forgot password state
+  const [mode, setMode] = useState<'login' | 'forgot'>('login')
+  const [resetForm, setResetForm] = useState({ email: '', token: '', newPassword: '', confirm: '' })
+  const [resetLoading, setResetLoading] = useState(false)
+  const [resetError, setResetError] = useState('')
+  const [resetSuccess, setResetSuccess] = useState(false)
+
+  const setReset = (field: string, value: string) =>
+    setResetForm((p) => ({ ...p, [field]: value }))
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     setError('')
@@ -39,6 +49,28 @@ export default function LoginPage() {
     } catch (err: any) {
       setError(err.response?.data?.message ?? 'Email atau password salah')
       setLoading(false)
+    }
+  }
+
+  const handleResetSubmit = async (e: FormEvent) => {
+    e.preventDefault()
+    setResetError('')
+    if (resetForm.newPassword !== resetForm.confirm) {
+      setResetError('Konfirmasi password tidak cocok')
+      return
+    }
+    if (resetForm.newPassword.length < 8) {
+      setResetError('Password baru minimal 8 karakter')
+      return
+    }
+    setResetLoading(true)
+    try {
+      await resetPassword(resetForm.email, resetForm.token, resetForm.newPassword)
+      setResetSuccess(true)
+    } catch (err: any) {
+      setResetError(err.response?.data?.message ?? 'Kode reset tidak valid atau sudah kedaluwarsa')
+    } finally {
+      setResetLoading(false)
     }
   }
 
@@ -77,7 +109,7 @@ export default function LoginPage() {
               </div>
               <Spinner size="sm" />
             </div>
-          ) : (
+          ) : mode === 'login' ? (
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
               <div className="rounded-[var(--radius)] px-4 py-3 text-[13px]"
@@ -132,6 +164,129 @@ export default function LoginPage() {
               {loading ? <Spinner size="sm" /> : null}
               Masuk
             </button>
+
+            <div className="text-center pt-1">
+              <button
+                type="button"
+                onClick={() => { setMode('forgot'); setError('') }}
+                className="text-[12px]"
+                style={{ color: 'var(--teal)', background: 'none', border: 'none', cursor: 'pointer' }}
+              >
+                Lupa Password?
+              </button>
+            </div>
+          </form>
+          ) : resetSuccess ? (
+            <div className="flex flex-col items-center gap-3 py-4 text-center">
+              <div className="w-10 h-10 rounded-full flex items-center justify-center text-xl"
+                style={{ background: 'var(--teal-l)' }}>
+                ✓
+              </div>
+              <div>
+                <p className="text-[14px] font-semibold" style={{ color: 'var(--teal-d)' }}>
+                  Password berhasil direset!
+                </p>
+                <p className="text-[12px] mt-1" style={{ color: 'var(--text3)' }}>
+                  Silakan login dengan password baru.
+                </p>
+              </div>
+              <button
+                className="btn btn-primary"
+                style={{ fontSize: 13 }}
+                onClick={() => { setMode('login'); setResetSuccess(false); setResetForm({ email: '', token: '', newPassword: '', confirm: '' }) }}
+              >
+                Kembali ke Login
+              </button>
+            </div>
+          ) : (
+          <form onSubmit={handleResetSubmit} className="space-y-4">
+            <div>
+              <p className="text-[13px] font-semibold mb-1" style={{ color: 'var(--text)' }}>Reset Password</p>
+              <p className="text-[12px]" style={{ color: 'var(--text3)' }}>
+                Masukkan email Anda dan kode reset yang diberikan admin.
+              </p>
+            </div>
+
+            {resetError && (
+              <div className="rounded-[var(--radius)] px-4 py-3 text-[13px]"
+                style={{ background: 'var(--danger)', color: 'var(--danger-t)', border: '1px solid #FECACA' }}>
+                {resetError}
+              </div>
+            )}
+
+            <div>
+              <label className="form-label">Email</label>
+              <input
+                className="form-input"
+                type="email"
+                value={resetForm.email}
+                onChange={(e) => setReset('email', e.target.value)}
+                placeholder="nama@klinik.local"
+                required
+                autoFocus
+              />
+            </div>
+
+            <div>
+              <label className="form-label">Kode Reset (dari Admin)</label>
+              <input
+                className="form-input"
+                type="text"
+                value={resetForm.token}
+                onChange={(e) => setReset('token', e.target.value.toUpperCase())}
+                placeholder="Contoh: ABC12DEF"
+                maxLength={8}
+                required
+                style={{ letterSpacing: '0.15em', textTransform: 'uppercase' }}
+              />
+            </div>
+
+            <div>
+              <label className="form-label">Password Baru</label>
+              <input
+                className="form-input"
+                type="password"
+                value={resetForm.newPassword}
+                onChange={(e) => setReset('newPassword', e.target.value)}
+                placeholder="Min. 8 karakter"
+                minLength={8}
+                required
+              />
+            </div>
+
+            <div>
+              <label className="form-label">Konfirmasi Password Baru</label>
+              <input
+                className="form-input"
+                type="password"
+                value={resetForm.confirm}
+                onChange={(e) => setReset('confirm', e.target.value)}
+                placeholder="Ulangi password baru"
+                minLength={8}
+                required
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={resetLoading}
+              className="btn btn-primary w-full justify-center"
+              style={{ height: 40, fontSize: 14 }}
+            >
+              {resetLoading ? <Spinner size="sm" /> : null}
+              Reset Password
+            </button>
+
+            <div className="text-center pt-1">
+              <button
+                type="button"
+                onClick={() => { setMode('login'); setResetError('') }}
+                className="text-[12px]"
+                style={{ color: 'var(--text3)', background: 'none', border: 'none', cursor: 'pointer' }}
+              >
+                ← Kembali ke Login
+              </button>
+            </div>
           </form>
           )}
         </div>

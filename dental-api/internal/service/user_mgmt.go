@@ -2,8 +2,13 @@ package service
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"math/big"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -14,10 +19,35 @@ import (
 	"github.com/yourusername/dental-api/internal/repository"
 )
 
-type UserMgmtService struct{ repo *repository.UserRepo }
+type GenerateResetTokenResult struct {
+	Token     string    `json:"token"`
+	ExpiresAt time.Time `json:"expires_at"`
+}
 
-func NewUserMgmtService(repo *repository.UserRepo) *UserMgmtService {
-	return &UserMgmtService{repo: repo}
+type UserMgmtService struct {
+	repo      *repository.UserRepo
+	resetRepo *repository.PasswordResetRepo
+}
+
+func NewUserMgmtService(repo *repository.UserRepo, resetRepo *repository.PasswordResetRepo) *UserMgmtService {
+	return &UserMgmtService{repo: repo, resetRepo: resetRepo}
+}
+
+const tokenChars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+
+func generateResetToken() (plain, hash string, err error) {
+	b := make([]byte, 8)
+	for i := range b {
+		n, err := rand.Int(rand.Reader, big.NewInt(int64(len(tokenChars))))
+		if err != nil {
+			return "", "", err
+		}
+		b[i] = tokenChars[n.Int64()]
+	}
+	plain = string(b)
+	h := sha256.Sum256([]byte(plain))
+	hash = hex.EncodeToString(h[:])
+	return plain, hash, nil
 }
 
 func (s *UserMgmtService) List(ctx context.Context) ([]model.User, error) {
@@ -112,4 +142,19 @@ func (s *UserMgmtService) Delete(ctx context.Context, id uuid.UUID) error {
 		return err
 	}
 	return nil
+}
+
+func (s *UserMgmtService) GenerateResetToken(ctx context.Context, userID uuid.UUID) (*GenerateResetTokenResult, error) {
+	if err := s.resetRepo.InvalidatePrevious(ctx, userID); err != nil {
+		return nil, fmt.Errorf("invalidate tokens: %w", err)
+	}
+	plain, hash, err := generateResetToken()
+	if err != nil {
+		return nil, fmt.Errorf("generate token: %w", err)
+	}
+	expiresAt := time.Now().Add(24 * time.Hour)
+	if err := s.resetRepo.Create(ctx, userID, hash, expiresAt); err != nil {
+		return nil, err
+	}
+	return &GenerateResetTokenResult{Token: plain, ExpiresAt: expiresAt}, nil
 }

@@ -58,15 +58,16 @@ func main() {
 	patientRepo    := repository.NewPatientRepo(pool)
 	visitRepo      := repository.NewVisitRepo(pool)
 	attachmentRepo := repository.NewAttachmentRepo(pool)
+	resetRepo      := repository.NewPasswordResetRepo(pool)
 
 	// Services
-	authSvc       := service.NewAuthService(userRepo, jwtMgr)
+	authSvc       := service.NewAuthService(userRepo, resetRepo, jwtMgr)
 	branchSvc     := service.NewBranchService(branchRepo)
 	patientSvc    := service.NewPatientService(patientRepo)
 	visitSvc      := service.NewVisitService(visitRepo, patientRepo)
 	attachmentSvc := service.NewAttachmentService(attachmentRepo, visitRepo, store)
 	exportSvc     := service.NewExportService(patientRepo, visitRepo)
-	userMgmtSvc   := service.NewUserMgmtService(userRepo)
+	userMgmtSvc   := service.NewUserMgmtService(userRepo, resetRepo)
 
 	// Handlers
 	authH       := handler.NewAuthHandler(authSvc)
@@ -99,15 +100,17 @@ func main() {
 	r.Route("/api/v1", func(r chi.Router) {
 
 		// Public
-		r.Post("/auth/login",  authH.Login)
+		r.Post("/auth/login",          authH.Login)
+		r.Post("/auth/reset-password", authH.ResetPassword)
 
 		// Protected — semua perlu login
 		r.Group(func(r chi.Router) {
 			r.Use(authMw.Authenticate)
 
 			// Auth
-			r.Get("/auth/me",     authH.Me)
-			r.Post("/auth/logout", authH.Logout)
+			r.Get("/auth/me",                   authH.Me)
+			r.Post("/auth/logout",              authH.Logout)
+			r.Put("/auth/change-password",      authH.ChangePassword)
 
 			// Branches
 			r.Get("/branches", branchH.List)
@@ -152,12 +155,13 @@ func main() {
 			r.Group(func(r chi.Router) {
 				r.Use(authMw.RequireSuperAdmin)
 
-				r.Get("/users",                    userMgmtH.List)
-				r.Post("/users",                   userMgmtH.Create)
-				r.Put("/users/{id}",               userMgmtH.Update)
-				r.Post("/users/{id}/activate",     userMgmtH.Activate)
-				r.Post("/users/{id}/deactivate",   userMgmtH.Deactivate)
-				r.Delete("/users/{id}",            userMgmtH.Delete)
+				r.Get("/users",                      userMgmtH.List)
+				r.Post("/users",                     userMgmtH.Create)
+				r.Put("/users/{id}",                 userMgmtH.Update)
+				r.Post("/users/{id}/activate",       userMgmtH.Activate)
+				r.Post("/users/{id}/deactivate",     userMgmtH.Deactivate)
+				r.Delete("/users/{id}",              userMgmtH.Delete)
+				r.Post("/users/{id}/reset-token",    userMgmtH.GenerateResetToken)
 			})
 		})
 	})

@@ -94,7 +94,7 @@ export default function VisitFormModal({ patientId, visitId, onClose, onSuccess 
   }
 
   return (
-    <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose() }}>
+    <div className="modal-overlay">
       <div className="modal" style={{ maxWidth: 520 }}>
         <div className="modal-header">
           <h3>{isEdit ? 'Edit Kunjungan' : 'Tambah Kunjungan'}</h3>

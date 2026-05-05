@@ -35,3 +35,6 @@ export const deactivateUser = (id: string) =>
 
 export const deleteUser = (id: string) =>
   client.delete(`/users/${id}`)
+
+export const generateResetToken = (id: string) =>
+  client.post<{ token: string; expires_at: string }>(`/users/${id}/reset-token`).then((r) => r.data)

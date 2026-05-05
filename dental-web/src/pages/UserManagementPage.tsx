@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { getUsers, createUser, updateUser, activateUser, deactivateUser, deleteUser } from '../api/users'
+import { getUsers, createUser, updateUser, activateUser, deactivateUser, deleteUser, generateResetToken } from '../api/users'
 import { getBranches } from '../api/branches'
 import {
   Button, FormField, Badge, EmptyState, PageHeader,
@@ -10,10 +10,18 @@ import {
 
 type ModalMode = 'create' | 'edit' | null
 
+interface ResetTokenResult {
+  token: string
+  expires_at: string
+  userName: string
+}
+
 export default function UserManagementPage() {
   const qc = useQueryClient()
   const [modal, setModal] = useState<ModalMode>(null)
   const [editId, setEditId] = useState<string | null>(null)
+  const [resetToken, setResetToken] = useState<ResetTokenResult | null>(null)
+  const [copied, setCopied] = useState(false)
 
   const [form, setForm] = useState({
     name: '', email: '', password: '', role: 'write', branch_id: '',
@@ -60,6 +68,17 @@ export default function UserManagementPage() {
     },
     onError: (err: any) => {
       toast.error(err.response?.data?.message ?? 'Gagal mengaktifkan user', { duration: 3000 })
+    },
+  })
+
+  const resetTokenMutation = useMutation({
+    mutationFn: ({ id, name }: { id: string; name: string }) =>
+      generateResetToken(id).then((r) => ({ ...r, userName: name })),
+    onSuccess: (data) => {
+      setResetToken(data)
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.message ?? 'Gagal generate kode reset', { duration: 3000 })
     },
   })
 
@@ -154,6 +173,13 @@ export default function UserManagementPage() {
                     <td>
                       <div className="flex gap-1.5">
                         <button className="btn btn-ghost btn-sm" onClick={() => openEdit(u)}>Edit</button>
+                        <button
+                          className="btn btn-ghost btn-sm"
+                          style={{ color: 'var(--teal)' }}
+                          onClick={() => resetTokenMutation.mutate({ id: u.id, name: u.name })}
+                        >
+                          Reset Password
+                        </button>
                         {u.is_active ? (
                           <button
                             className="btn btn-ghost btn-sm"
@@ -194,8 +220,46 @@ export default function UserManagementPage() {
         )}
       </div>
 
+      {resetToken && (
+        <div className="modal-overlay">
+          <div className="modal" style={{ maxWidth: 420 }}>
+            <div className="modal-header">
+              <h3>Kode Reset Password</h3>
+              <button className="modal-close" onClick={() => { setResetToken(null); setCopied(false) }}>&times;</button>
+            </div>
+            <div className="modal-body space-y-4">
+              <p className="text-[13px]" style={{ color: 'var(--text2)' }}>
+                Kode reset untuk <strong>{resetToken.userName}</strong>. Berlaku <strong>24 jam</strong> dan hanya bisa dipakai sekali.
+              </p>
+              <div className="rounded-[var(--radius)] p-4 text-center" style={{ background: 'var(--teal-l)' }}>
+                <p className="text-[28px] font-bold tracking-widest" style={{ color: 'var(--teal-d)', letterSpacing: '0.2em' }}>
+                  {resetToken.token}
+                </p>
+              </div>
+              <p className="text-[12px]" style={{ color: 'var(--text3)' }}>
+                Sampaikan kode ini ke user via telepon atau pesan. Jangan kirim lewat media yang tidak aman.
+                User masukkan kode ini di halaman "Lupa Password" pada halaman login.
+              </p>
+              <div className="flex gap-3 pt-1">
+                <Button
+                  variant="primary"
+                  onClick={() => {
+                    navigator.clipboard.writeText(resetToken.token)
+                    setCopied(true)
+                    setTimeout(() => setCopied(false), 2000)
+                  }}
+                >
+                  {copied ? 'Tersalin!' : 'Salin Kode'}
+                </Button>
+                <Button variant="secondary" onClick={() => { setResetToken(null); setCopied(false) }}>Tutup</Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {modal && (
-        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) closeModal() }}>
+        <div className="modal-overlay">
           <div className="modal">
             <div className="modal-header">
               <h3>{modal === 'create' ? 'Tambah User' : 'Edit User'}</h3>
@@ -230,7 +294,7 @@ export default function UserManagementPage() {
                   <select className="form-select" value={form.role} onChange={(e) => set('role', e.target.value)}>
                     <option value="write">Dokter (Write)</option>
                     <option value="readonly">Suster (Readonly)</option>
-                    <option value="superadmin">Super Admin</option>
+                    {/*<option value="superadmin">Super Admin</option>*/}
                   </select>
                 </FormField>
 

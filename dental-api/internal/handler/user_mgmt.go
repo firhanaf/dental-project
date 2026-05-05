@@ -105,3 +105,17 @@ func (h *UserMgmtHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 	response.JSON(w, http.StatusOK, map[string]string{"message": "User berhasil dihapus"})
 }
+
+func (h *UserMgmtHandler) GenerateResetToken(w http.ResponseWriter, r *http.Request) {
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		response.BadRequest(w, "ID tidak valid")
+		return
+	}
+	result, err := h.svc.GenerateResetToken(r.Context(), id)
+	if err != nil {
+		response.InternalError(w)
+		return
+	}
+	response.JSON(w, http.StatusOK, result)
+}

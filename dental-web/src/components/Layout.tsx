@@ -1,10 +1,11 @@
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useAuth } from '../hooks/useAuth'
 import { useIdleTimeout } from '../hooks/useIdleTimeout'
 import { logout } from '../api/auth'
 import IdleWarningModal from './IdleWarningModal'
+import ChangePasswordModal from './ChangePasswordModal'
 
 const navItems = [
   { to: '/',        label: 'Dashboard',       end: true  },
@@ -16,6 +17,7 @@ const navItems = [
 export default function Layout() {
   const { user, signOut, isSuperAdmin } = useAuth()
   const navigate = useNavigate()
+  const [showChangePassword, setShowChangePassword] = useState(false)
 
   const handleLogout = useCallback(async () => {
     const name = user?.name ?? ''
@@ -93,6 +95,13 @@ export default function Layout() {
           </div>
           <div style={{ width: 1, height: 20, background: 'var(--border)' }} />
           <button
+            onClick={() => setShowChangePassword(true)}
+            className="btn btn-ghost btn-sm"
+            style={{ color: 'var(--text3)' }}
+          >
+            Ganti Password
+          </button>
+          <button
             onClick={handleLogout}
             className="btn btn-ghost btn-sm"
             style={{ color: 'var(--text3)' }}
@@ -113,6 +122,9 @@ export default function Layout() {
           onStay={stayLoggedIn}
           onLogout={handleIdleLogout}
         />
+      )}
+      {showChangePassword && (
+        <ChangePasswordModal onClose={() => setShowChangePassword(false)} />
       )}
     </div>
   )

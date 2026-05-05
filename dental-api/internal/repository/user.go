@@ -15,7 +15,7 @@ func NewUserRepo(db *pgxpool.Pool) *UserRepo { return &UserRepo{db: db} }
 
 func (r *UserRepo) FindByEmail(ctx context.Context, email string) (*model.User, error) {
 	q := `SELECT id,branch_id,name,email,password_hash,role,is_active,last_login_at,created_at,updated_at
-	      FROM users WHERE email=$1 AND is_active=true`
+	      FROM users WHERE email=$1`
 	var u model.User
 	err := r.db.QueryRow(ctx, q, email).Scan(
 		&u.ID,&u.BranchID,&u.Name,&u.Email,&u.PasswordHash,
@@ -90,6 +90,14 @@ func (r *UserRepo) Delete(ctx context.Context, id uuid.UUID) error {
 		return fmt.Errorf("record not found")
 	}
 	return nil
+}
+
+func (r *UserRepo) UpdatePassword(ctx context.Context, id uuid.UUID, passwordHash string) error {
+	_, err := r.db.Exec(ctx,
+		"UPDATE users SET password_hash=$1, updated_at=NOW() WHERE id=$2",
+		passwordHash, id,
+	)
+	return err
 }
 
 func (r *UserRepo) UpdateLastLogin(ctx context.Context, id uuid.UUID) error {
