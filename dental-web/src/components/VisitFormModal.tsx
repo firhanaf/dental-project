@@ -5,6 +5,7 @@ import { getVisit, createVisit, updateVisit } from '../api/visits'
 import { getUsers } from '../api/users'
 import { useAuth } from '../hooks/useAuth'
 import { Button, FormField, Spinner } from './ui'
+import DateInput from './DateInput'
 
 interface Props {
   patientId: string
@@ -107,11 +108,9 @@ export default function VisitFormModal({ patientId, visitId, onClose, onSuccess 
           <form onSubmit={handleSubmit} className="modal-body space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <FormField label="Tanggal Kunjungan" required>
-                <input
-                  className="form-input"
-                  type="date"
+                <DateInput
                   value={form.visit_date}
-                  onChange={(e) => set('visit_date', e.target.value)}
+                  onChange={(v) => set('visit_date', v)}
                   required
                 />
               </FormField>
@@ -179,11 +178,9 @@ export default function VisitFormModal({ patientId, visitId, onClose, onSuccess 
                 />
               </FormField>
               <FormField label="Tanggal Kontrol">
-                <input
-                  className="form-input"
-                  type="date"
+                <DateInput
                   value={form.next_control_date}
-                  onChange={(e) => set('next_control_date', e.target.value)}
+                  onChange={(v) => set('next_control_date', v)}
                 />
               </FormField>
             </div>

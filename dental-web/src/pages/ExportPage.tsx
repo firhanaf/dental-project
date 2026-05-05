@@ -4,6 +4,7 @@ import { toast } from 'sonner'
 import { exportPatients, exportVisits } from '../api/export'
 import { getBranches } from '../api/branches'
 import { Button, FormField, PageHeader } from '../components/ui'
+import DateInput from '../components/DateInput'
 
 export default function ExportPage() {
   const [branchId, setBranchId] = useState('')
@@ -74,20 +75,10 @@ export default function ExportPage() {
           </p>
           <div className="grid grid-cols-2 gap-3 mb-4">
             <FormField label="Dari Tanggal">
-              <input
-                className="form-input"
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-              />
+              <DateInput value={dateFrom} onChange={setDateFrom} />
             </FormField>
             <FormField label="Sampai Tanggal">
-              <input
-                className="form-input"
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-              />
+              <DateInput value={dateTo} onChange={setDateTo} />
             </FormField>
           </div>
           <Button

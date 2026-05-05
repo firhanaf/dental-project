@@ -6,6 +6,7 @@ import { getPatient, createPatient, updatePatient } from '../api/patients'
 import { getBranches } from '../api/branches'
 import { useAuth } from '../hooks/useAuth'
 import { Button, FormField, PageHeader, Spinner } from '../components/ui'
+import DateInput from '../components/DateInput'
 
 export default function PatientFormPage() {
   const { id } = useParams<{ id: string }>()
@@ -109,11 +110,9 @@ export default function PatientFormPage() {
 
           <div className="grid grid-cols-2 gap-3">
             <FormField label="Tanggal Lahir" required>
-              <input
-                className="form-input"
-                type="date"
+              <DateInput
                 value={form.date_of_birth}
-                onChange={(e) => set('date_of_birth', e.target.value)}
+                onChange={(v) => set('date_of_birth', v)}
                 required
               />
             </FormField>
